@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Add any global styles here */
+
+/* Ensure Leaflet container takes full height */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+}
+
