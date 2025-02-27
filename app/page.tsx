@@ -43,18 +43,18 @@ export default function Home() {
         <div className="absolute inset-0 z-0">
           <LeafletMap />
         </div>
-        <div className="container relative z-10 px-4 flex flex-col items-center justify-center text-center">
-          <div className="max-w-3xl text-white mb-8">
+        <div className="container relative z-10 px-4 flex flex-col items-start justify-center">
+          <div className="max-w-3xl text-white mb-8 text-left">
             <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
               Mapping the
               <span className="block text-primary">Digital World</span>
               One Project at a Time
             </h1>
-            <p className="text-lg md:text-xl text-zinc-300 mb-8 mx-auto">
+            <p className="text-lg md:text-xl text-zinc-300 mb-8">
               GIS Developer & Full Stack Engineer specializing in interactive mapping solutions and location-based
               applications
             </p>
-            <div className="flex flex-wrap gap-4 justify-center">
+            <div className="flex flex-wrap gap-4">
               <Button size="lg" className="bg-primary hover:bg-primary/90">
                 View Projects
               </Button>
