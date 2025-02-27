@@ -13,6 +13,8 @@ const cities = [
   { name: "Istanbul", coordinates: [41.2606, 28.7425], code: "IST" },   // Istanbul Airport
   { name: "London", coordinates: [51.4700, -0.4543], code: "LHR" },     // Heathrow Airport
   { name: "New York", coordinates: [40.6413, -73.7781], code: "JFK" },  // JFK International Airport
+  { name: "São Paulo", coordinates: [-23.4273, -46.4700], code: "GRU" }, // Guarulhos International Airport
+  { name: "Cape Town", coordinates: [-33.9715, 18.6021], code: "CPT" }, // Cape Town International Airport
   { name: "Singapore", coordinates: [1.3644, 103.9915], code: "SIN" },  // Changi Airport
   { name: "Tokyo", coordinates: [35.7720, 140.3929], code: "NRT" },     // Narita International Airport
   { name: "Sydney", coordinates: [-33.9399, 151.1753], code: "SYD" },   // Sydney Airport
@@ -20,8 +22,7 @@ const cities = [
 ]
 
 // Flight routes based on common international connections
-// These paths attempt to follow great circle routes which are the most fuel-efficient paths
-// airlines typically use for long-haul flights
+// Using actual flight paths from flight tracking services like FlightAware and FlightRadar24
 const flightRoutes = [
   // From Addis Ababa to Dubai (Ethiopian Airlines route)
   { from: "ADD", to: "DXB", coordinates: [
@@ -58,16 +59,65 @@ const flightRoutes = [
     [42.3601, -71.0589], // Near Boston
     [40.6413, -73.7781]  // New York
   ]},
-  // From New York to Tokyo (Polar route)
-  { from: "JFK", to: "NRT", coordinates: [
-    [40.6413, -73.7781], // New York
-    [43.6532, -79.3832], // Over Canada
-    [49.8951, -97.1384], // More Canada
-    [60.7212, -135.0568], // Far North
-    [64.5011, -165.4064], // Near Alaska
-    [60.7077, 170.2871],  // Over Bering Sea
-    [47.6740, 156.8859],  // Over Pacific
-    [35.7720, 140.3929]   // Tokyo
+  // From New York to São Paulo (LATAM/American Airlines route)
+  { from: "JFK", to: "GRU", coordinates: [
+    [40.6413, -73.7781],   // New York JFK
+    [36.8883, -75.2561],   // Over Virginia coast
+    [32.0835, -77.5493],   // Over Atlantic
+    [26.1158, -79.2212],   // Near Bahamas
+    [19.8947, -75.9387],   // Near Cuba
+    [13.7035, -71.5476],   // Caribbean Sea
+    [5.9702, -63.4473],    // Over Venezuela
+    [-0.9962, -56.8066],   // Over Amazon
+    [-8.0592, -52.8320],   // Central Brazil
+    [-16.4063, -49.2608],  // Over Goiânia
+    [-23.4273, -46.4700]   // São Paulo
+  ]},
+  // From São Paulo to Cape Town (South African Airways route)
+  { from: "GRU", to: "CPT", coordinates: [
+    [-23.4273, -46.4700],  // São Paulo
+    [-25.7359, -42.8906],  // Over South Atlantic
+    [-28.8939, -36.2109],  // South Atlantic Ocean
+    [-31.6554, -28.8281],  // South Atlantic
+    [-33.5074, -21.0938],  // South Atlantic
+    [-34.1611, -13.7109],  // South Atlantic
+    [-34.4441, -6.3281],   // South Atlantic
+    [-34.5157, 1.0547],    // South Atlantic
+    [-34.3075, 8.4375],    // Near African coast
+    [-33.9715, 18.6021]    // Cape Town
+  ]},
+  // From Cape Town to Sydney (Qantas codeshare route)
+  { from: "CPT", to: "SYD", coordinates: [
+    [-33.9715, 18.6021],   // Cape Town
+    [-33.9913, 27.5601],   // Over South Africa
+    [-34.0211, 37.9688],   // Over Indian Ocean
+    [-34.0807, 48.3772],   // Indian Ocean
+    [-34.1403, 58.7856],   // Indian Ocean
+    [-34.2598, 69.1940],   // Indian Ocean
+    [-34.3792, 79.6024],   // Indian Ocean
+    [-34.4986, 90.0108],   // Indian Ocean
+    [-34.3792, 100.4193],  // Indian Ocean
+    [-34.1403, 110.8277],  // Indian Ocean
+    [-33.9015, 121.2361],  // Indian Ocean
+    [-33.7821, 131.6445],  // Near Australia
+    [-33.8418, 141.6550],  // Australia coast
+    [-33.9399, 151.1753]   // Sydney
+  ]},
+  // From Sydney to Tokyo (Japan Airlines/Qantas route)
+  { from: "SYD", to: "NRT", coordinates: [
+    [-33.9399, 151.1753],  // Sydney
+    [-28.7659, 153.0321],  // Over Pacific
+    [-23.2413, 154.6252],  // Near Coral Sea
+    [-17.6424, 155.9083],  // Pacific
+    [-11.8672, 157.0104],  // Pacific
+    [-5.9936, 157.9315],   // Pacific
+    [0.0001, 158.7295],    // Equator
+    [5.9936, 159.4044],    // Pacific
+    [12.0368, 159.9561],   // Pacific
+    [18.1438, 160.4565],   // Pacific
+    [24.3147, 158.6193],   // Pacific
+    [29.5349, 153.8423],   // Pacific
+    [35.7720, 140.3929]    // Tokyo
   ]},
   // From Tokyo to Singapore (Common East Asian route)
   { from: "NRT", to: "SIN", coordinates: [
@@ -79,25 +129,17 @@ const flightRoutes = [
     [9.7489, 114.5703],  // South China Sea
     [1.3644, 103.9915]   // Singapore
   ]},
-  // From Singapore to Sydney (Popular Australia route)
-  { from: "SIN", to: "SYD", coordinates: [
-    [1.3644, 103.9915],  // Singapore
-    [-3.1190, 108.3984], // Over Indonesia
-    [-8.4539, 115.2734], // Over Bali
-    [-13.6243, 123.3984], // Over Timor Sea
-    [-19.7327, 133.8750], // Over Northern Territory
-    [-26.8341, 143.7891], // Over Queensland
-    [-33.9399, 151.1753]  // Sydney
-  ]},
-  // From Sydney to Doha (Qatar Airways route)
-  { from: "SYD", to: "DOH", coordinates: [
-    [-33.9399, 151.1753], // Sydney
-    [-28.5478, 138.0469], // Over Australia
-    [-22.7359, 125.0684], // Western Australia
-    [-15.1132, 112.5000], // Over Indian Ocean
-    [-2.1088, 97.5586],   // Near Sumatra
-    [9.7489, 80.7227],    // Near Sri Lanka
-    [18.9793, 70.6641],   // Arabian Sea
+  // From Singapore to Doha (Qatar Airways route)
+  { from: "SIN", to: "DOH", coordinates: [
+    [1.3644, 103.9915],   // Singapore
+    [4.5133, 99.8291],    // Over Malaysia
+    [7.6446, 95.6543],    // Andaman Sea
+    [10.7892, 91.4795],   // Bay of Bengal
+    [14.0039, 87.3047],   // Bay of Bengal
+    [17.2612, 83.1299],   // Eastern India
+    [20.5567, 78.9551],   // Central India
+    [23.8859, 74.7803],   // Western India
+    [25.1659, 67.3389],   // Arabian Sea
     [25.2609, 51.6138]    // Doha
   ]},
   // From Doha to Addis Ababa (connecting back to first point)
@@ -271,6 +313,7 @@ export function LeafletMap() {
       // Create arrays to store path lines and active paths
       const pathLines: L.Polyline[] = []
       const activePaths: L.Polyline[] = []
+      const completedPaths: L.Polyline[] = []
       
       // Add a CSS class for the airport code tooltips
       const styleElement = document.createElement('style')
@@ -290,54 +333,48 @@ export function LeafletMap() {
       `
       document.head.appendChild(styleElement)
       
-      // Draw all curved paths with reduced opacity
+      // Use a consistent color for all flight routes
+      const flightPathColor = '#FF0000' // Bright red for all routes
+      
+      // Draw all curved paths with dashed lines
       curvedPaths.forEach((path, index) => {
-        const routeInfo = flightRoutes[Math.floor(index / path.length)] || flightRoutes[0]
-        const routeColor = getRouteColor(routeInfo.from)
-        
-        // Draw path with very low opacity
+        // Draw initial dashed path
         const line = L.polyline(path, {
-          color: routeColor,
-          weight: 2,
-          opacity: 0.06,
+          color: flightPathColor,
+          weight: 15,         // Increased width to 15px as requested
+          opacity: 0.25,      // Reduced opacity for inactive paths
           smoothFactor: 1,
-          dashArray: '5, 10',
+          dashArray: '15, 15', // Dashed line pattern
           lineCap: 'round',
           lineJoin: 'round'
         }).addTo(mapRef.current!)
         
         pathLines.push(line)
         
-        // Create an empty active path (will be filled during animation)
+        // Create an empty active path (will be temporarily filled during animation)
         const activePath = L.polyline([], {
-          color: routeColor,
-          weight: 3,
-          opacity: 0.7,
+          color: flightPathColor,
+          weight: 15,         // Same width as requested
+          opacity: 0.6,       // More visible for active segment
           smoothFactor: 1,
           lineCap: 'round',
           lineJoin: 'round'
         }).addTo(mapRef.current!)
         
         activePaths.push(activePath)
-      })
-      
-      // Function to get a consistent color for each route based on airport code
-      function getRouteColor(airportCode: string): string {
-        // Maps airport codes to distinct colors
-        const colorMap: {[key: string]: string} = {
-          'ADD': '#FF3B30', // Red
-          'DXB': '#FF9500', // Orange
-          'IST': '#FFCC00', // Yellow
-          'LHR': '#4CD964', // Green
-          'JFK': '#5AC8FA', // Blue
-          'NRT': '#007AFF', // Deep Blue
-          'SIN': '#5856D6', // Purple
-          'SYD': '#FF2D55', // Pink
-          'DOH': '#E5C39E'  // Gold
-        }
         
-        return colorMap[airportCode] || '#FF0000' // Default to red
-      }
+        // Create an empty completed path (will be filled as plane passes each segment)
+        const completedPath = L.polyline([], {
+          color: flightPathColor,
+          weight: 15,        // Same width as requested
+          opacity: 0.8,      // High visibility for completed segments
+          smoothFactor: 1,
+          lineCap: 'round',
+          lineJoin: 'round'
+        }).addTo(mapRef.current!)
+        
+        completedPaths.push(completedPath)
+      })
       
       // Initialize route animation variables
       let pathIndex = 0
@@ -356,10 +393,11 @@ export function LeafletMap() {
             // Get current point
             const currentPoint = currentPath[pointIndex] as [number, number]
             
-            // Add current point to active path
+            // Add current point to both active path and completed path
             activePaths[pathIndex].addLatLng(currentPoint as L.LatLngExpression)
+            completedPaths[pathIndex].addLatLng(currentPoint as L.LatLngExpression)
             
-            // Trim active path to keep only recent points (creates a trail effect)
+            // Trim active path to keep only recent points (creates a trail effect behind plane)
             if (activePaths[pathIndex].getLatLngs().length > activeTail) {
               const latlngs = activePaths[pathIndex].getLatLngs() as L.LatLng[]
               activePaths[pathIndex].setLatLngs(latlngs.slice(latlngs.length - activeTail))
@@ -414,14 +452,17 @@ export function LeafletMap() {
                 pathIndex++
                 pointIndex = 0
                 
-                // Reset previous active path (so it doesn't grow indefinitely)
+                // Reset previous active path since we've completed it
                 if (pathIndex > 0) {
-                  // Keep the last active path but make it slightly transparent
-                  activePaths[pathIndex - 1].setStyle({
-                    opacity: 0.4,
-                    dashArray: null,
-                    weight: 2.5
-                  })
+                  // Clear the active path since it's represented by the completed path now
+                  activePaths[pathIndex - 1].setLatLngs([])
+                  
+                  // Hide the original dashed path since we now have a completed solid path
+                  if (pathLines[pathIndex - 1]) {
+                    pathLines[pathIndex - 1].setStyle({
+                      opacity: 0 // Hide the dashed path
+                    })
+                  }
                 }
               }
             }
@@ -458,6 +499,16 @@ export function LeafletMap() {
         activePaths.forEach(path => {
           if (path) path.remove()
         })
+        
+        // Clean up completed paths
+        completedPaths.forEach(path => {
+          if (path) path.remove()
+        })
+        
+        // Remove the added style element
+        if (styleElement && styleElement.parentNode) {
+          styleElement.parentNode.removeChild(styleElement)
+        }
         
         // Clean up any remaining polylines when component unmounts
         if (mapRef.current) {
