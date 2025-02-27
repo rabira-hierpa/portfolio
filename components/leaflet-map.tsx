@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
+import { Plane } from "lucide-react"
+import { createRoot } from "react-dom/client"
 
 const cities = [
   { name: "Addis Ababa", coordinates: [9.032, 38.7422] },
@@ -78,14 +80,55 @@ export function LeafletMap() {
   useEffect(() => {
     if (mapRef.current && routeRef.current) {
       let currentIndex = 0
+      let planeMarker: L.Marker | null = null
+      
+      const createPlaneIcon = () => {
+        const planeIconDiv = document.createElement('div')
+        planeIconDiv.className = 'plane-icon'
+        const root = createRoot(planeIconDiv)
+        root.render(<Plane size={24} className="text-primary" style={{ transform: 'rotate(45deg)' }} />)
+        
+        return L.divIcon({
+          html: planeIconDiv,
+          className: 'plane-icon-container',
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        })
+      }
+      
       const animateRoute = () => {
         if (currentIndex < routeCoordinates.length) {
+          // Add point to the route path
           routeRef.current!.addLatLng(routeCoordinates[currentIndex] as L.LatLngExpression)
+          
+          // Calculate rotation angle for the plane
+          const nextIndex = currentIndex + 1 < routeCoordinates.length ? currentIndex + 1 : currentIndex
+          const currentPos = routeCoordinates[currentIndex]
+          const nextPos = routeCoordinates[nextIndex]
+          
+          // Remove previous plane marker if exists
+          if (planeMarker) {
+            planeMarker.remove()
+          }
+          
+          // Create new plane marker at current position
+          planeMarker = L.marker(currentPos as L.LatLngExpression, {
+            icon: createPlaneIcon(),
+            zIndexOffset: 1000
+          }).addTo(mapRef.current!)
+          
           currentIndex++
           setTimeout(animateRoute, 1000)
         }
       }
+      
       animateRoute()
+      
+      return () => {
+        if (planeMarker) {
+          planeMarker.remove()
+        }
+      }
     }
   }, [])
 

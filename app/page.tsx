@@ -1,4 +1,4 @@
-import { Github, Linkedin, Twitter, MapPin, Globe2 } from "lucide-react"
+import { Github, Linkedin, Twitter, MapPin, Globe2, Plane } from "lucide-react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -39,22 +39,22 @@ export default function Home() {
   return (
     <main className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative min-h-screen flex flex-col md:flex-row items-center justify-center overflow-hidden bg-zinc-900">
+      <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-zinc-900">
         <div className="absolute inset-0 z-0">
           <LeafletMap />
         </div>
-        <div className="container relative z-10 px-4 flex flex-col md:flex-row items-center justify-between">
-          <div className="md:w-1/2 text-white mb-8 md:mb-0">
+        <div className="container relative z-10 px-4 flex flex-col items-center justify-center text-center">
+          <div className="max-w-3xl text-white mb-8">
             <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
               Mapping the
               <span className="block text-primary">Digital World</span>
               One Project at a Time
             </h1>
-            <p className="text-lg md:text-xl text-zinc-300 mb-8 max-w-lg">
+            <p className="text-lg md:text-xl text-zinc-300 mb-8 mx-auto">
               GIS Developer & Full Stack Engineer specializing in interactive mapping solutions and location-based
               applications
             </p>
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap gap-4 justify-center">
               <Button size="lg" className="bg-primary hover:bg-primary/90">
                 View Projects
               </Button>
@@ -81,10 +81,11 @@ export default function Home() {
 
       {/* Expertise Section */}
       <section className="py-20 bg-zinc-50">
-        <div className="container px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
+        <div className="container px-4 mx-auto text-center">
+          <h2 className="text-3xl font-bold mb-12">My Expertise</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16 max-w-4xl mx-auto">
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 text-secondary">
+              <div className="flex items-center gap-2 text-secondary justify-center">
                 <MapPin className="h-5 w-5" />
                 <h2 className="text-2xl font-bold">GIS Development</h2>
               </div>
@@ -94,7 +95,7 @@ export default function Home() {
               </p>
             </div>
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 text-primary">
+              <div className="flex items-center gap-2 text-primary justify-center">
                 <Globe2 className="h-5 w-5" />
                 <h2 className="text-2xl font-bold">Web Development</h2>
               </div>
@@ -105,8 +106,9 @@ export default function Home() {
             </div>
           </div>
 
+          <h2 className="text-3xl font-bold mb-12">Featured Projects</h2>
           {/* Projects Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
             <ProjectCard
               type="gis"
               title="SoundSite"
@@ -131,9 +133,9 @@ export default function Home() {
 
       {/* Latest Blog Posts */}
       <section className="py-20 bg-zinc-50">
-        <div className="container px-4">
-          <h2 className="text-3xl font-bold mb-12 text-center">Latest Insights</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="container px-4 mx-auto text-center">
+          <h2 className="text-3xl font-bold mb-12">Latest Insights</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {blogPosts.map((post) => (
               <BlogPostCard
                 key={post.slug}
@@ -146,7 +148,7 @@ export default function Home() {
               />
             ))}
           </div>
-          <div className="mt-12 text-center">
+          <div className="mt-12">
             <Button asChild>
               <Link href="/blog">View All Posts</Link>
             </Button>
