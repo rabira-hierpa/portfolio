@@ -476,6 +476,9 @@ export function LeafletMap() {
       // Use a consistent color for all flight routes
       const flightPathColor = "#FF0000"; // Bright red for all routes
 
+      // Track fadingSegments for cleanup
+      const fadingSegments: L.Polyline[] = [];
+      
       // Draw all curved paths with dashed lines
       curvedPaths.forEach((path, index) => {
         // Draw initial dashed path
@@ -561,11 +564,9 @@ export function LeafletMap() {
               const marker = cityMarkers[cityCode];
               if (marker) {
                 try {
-                  // Use direct SVG manipulation for Leaflet Circle Markers
-                  const svgElement = marker.getElement();
-                  if (svgElement) {
-                    svgElement.classList.add("pulse-animation");
-                  }
+                  // Instead of using CSS animations, directly set the radius of the circle marker
+                  const originalRadius = cityOriginalRadius[cityCode] || 4;
+                  marker.setRadius(originalRadius * 5); // Make the marker 5x larger
 
                   // Show city name tooltip at exact city position
                   const city = cities.find(c => c.code === cityCode);
@@ -599,18 +600,9 @@ export function LeafletMap() {
                     const marker = cityMarkers[animatedCityCode];
                     if (marker) {
                       try {
-                        // Use direct SVG manipulation for Leaflet Circle Markers
-                        const svgElement = marker.getElement();
-                        if (svgElement) {
-                          // Remove pulse animation and add fade animation
-                          svgElement.classList.remove("pulse-animation");
-                          svgElement.classList.add("fade-animation");
-
-                          // After animation is complete, remove all classes
-                          setTimeout(() => {
-                            svgElement.classList.remove("fade-animation");
-                          }, 500);
-                        }
+                        // Restore original radius
+                        const originalRadius = cityOriginalRadius[animatedCityCode] || 4;
+                        marker.setRadius(originalRadius);
 
                         // Hide city name tooltip with fade
                         const tooltip = cityLabels[animatedCityCode];
@@ -675,6 +667,17 @@ export function LeafletMap() {
               zIndexOffset: 1000,
             }).addTo(mapRef.current!);
 
+            // Calculate distance from last city
+            const currentPathIndex = pathIndex;
+            const currentPathLength = currentPath.length;
+            const totalSegments = currentPathLength - 1;
+            const segmentProgress = pointIndex / totalSegments;
+            
+            // If we're 75% through a path segment, start fading the dashed line
+            if (segmentProgress >= 0.75 && pathLines[currentPathIndex] && pathLines[currentPathIndex].options.opacity > 0) {
+              fadeOutSegment(currentPathIndex);
+            }
+            
             // Increment point index
             pointIndex++;
 
@@ -715,8 +718,78 @@ export function LeafletMap() {
         }
       };
 
+      // Function to handle fading out path segments
+      const fadeOutSegment = (pathIndex: number, delay: number = 0) => {
+        // Create a copy of the path for fading
+        if (pathLines[pathIndex]) {
+          setTimeout(() => {
+            // Start fading out
+            let opacity = 0.25;
+            const fadeInterval = setInterval(() => {
+              opacity -= 0.05;
+              if (opacity <= 0) {
+                clearInterval(fadeInterval);
+                pathLines[pathIndex].setStyle({ opacity: 0 });
+              } else {
+                pathLines[pathIndex].setStyle({ opacity });
+              }
+            }, 100);
+          }, delay);
+        }
+      };
+      
       // Start the animation
       animateRoute();
+      
+      // Set up loop after finishing all segments
+      const setupLoop = () => {
+        // Reset animation state
+        let allComplete = true;
+        
+        for (let i = 0; i < curvedPaths.length; i++) {
+          if (i < pathIndex || (i === pathIndex && pointIndex >= curvedPaths[i].length)) {
+            allComplete = true;
+          } else {
+            allComplete = false;
+            break;
+          }
+        }
+        
+        if (allComplete) {
+          // Reset all paths and start over
+          pathIndex = 0;
+          pointIndex = 0;
+          previousBearing = 0;
+          animatedCities.clear();
+          
+          // Clear all completed paths
+          completedPaths.forEach(path => path.setLatLngs([]));
+          
+          // Reset all path lines
+          pathLines.forEach(line => {
+            line.setStyle({
+              opacity: 0.25,
+              dashArray: "10, 10"
+            });
+          });
+          
+          // Clean up fading segments
+          fadingSegments.forEach(segment => {
+            if (segment) segment.remove();
+          });
+          fadingSegments.length = 0;
+          
+          // Start animation again
+          setTimeout(() => {
+            animateRoute();
+          }, 2000); // 2 second pause before restarting
+        } else {
+          setTimeout(setupLoop, 1000);
+        }
+      };
+      
+      // Check for loop after a delay
+      setTimeout(setupLoop, 5000);
 
       return () => {
         // Clean up plane marker
@@ -737,6 +810,11 @@ export function LeafletMap() {
         // Clean up completed paths
         completedPaths.forEach((path) => {
           if (path) path.remove();
+        });
+        
+        // Clean up fading segments
+        fadingSegments.forEach((segment) => {
+          if (segment) segment.remove();
         });
 
         // Remove the added style element
