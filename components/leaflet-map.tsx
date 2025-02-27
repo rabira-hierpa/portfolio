@@ -379,6 +379,17 @@ export function LeafletMap() {
           transition: opacity 0.5s ease;
         }
         
+        /* SVG animation for circle markers */
+        .leaflet-interactive.pulse-animation {
+          transform-origin: center center;
+          animation: pulseCity 0.5s ease-out forwards;
+        }
+        
+        .leaflet-interactive.fade-animation {
+          transform-origin: center center;
+          animation: fadeCity 0.5s ease-in forwards;
+        }
+        
         @keyframes pulseCity {
           0% { transform: scale(1); }
           50% { transform: scale(5); }
@@ -388,14 +399,6 @@ export function LeafletMap() {
         @keyframes fadeCity {
           0% { transform: scale(5); }
           100% { transform: scale(1); }
-        }
-        
-        .pulse-animation {
-          animation: pulseCity 0.5s ease-out forwards;
-        }
-        
-        .fade-animation {
-          animation: fadeCity 0.5s ease-in forwards;
         }
       `
       document.head.appendChild(styleElement)
@@ -486,13 +489,20 @@ export function LeafletMap() {
               // Animate the city marker (expand)
               const marker = cityMarkers[cityCode]
               if (marker) {
-                // Apply pulse animation class
-                marker._path.classList.add('pulse-animation')
-                
-                // Show city name tooltip
-                cityLabels[cityCode].setLatLng(marker.getLatLng())
-                  .addTo(mapRef.current!)
-                  .setOpacity(1)
+                try {
+                  // Use direct SVG manipulation for Leaflet Circle Markers
+                  const svgElement = marker.getElement()
+                  if (svgElement) {
+                    svgElement.classList.add('pulse-animation')
+                  }
+                  
+                  // Show city name tooltip
+                  cityLabels[cityCode].setLatLng(marker.getLatLng())
+                    .addTo(mapRef.current!)
+                    .setOpacity(1)
+                } catch (error) {
+                  console.error("Error animating city marker:", error)
+                }
               }
             } 
             // Check if we're leaving a city that was previously animated
@@ -510,25 +520,33 @@ export function LeafletMap() {
                   if (distance > 1.0) { // Larger threshold for leaving
                     const marker = cityMarkers[animatedCityCode]
                     if (marker) {
-                      // Remove pulse animation
-                      marker._path.classList.remove('pulse-animation')
-                      marker._path.classList.add('fade-animation')
-                      
-                      // Hide city name tooltip with fade
-                      const tooltip = cityLabels[animatedCityCode]
-                      if (tooltip) {
-                        tooltip.setOpacity(0)
+                      try {
+                        // Use direct SVG manipulation for Leaflet Circle Markers
+                        const svgElement = marker.getElement()
+                        if (svgElement) {
+                          // Remove pulse animation and add fade animation
+                          svgElement.classList.remove('pulse-animation')
+                          svgElement.classList.add('fade-animation')
+                          
+                          // After animation is complete, remove all classes
+                          setTimeout(() => {
+                            svgElement.classList.remove('fade-animation')
+                          }, 500)
+                        }
                         
-                        // Remove tooltip after fade
-                        setTimeout(() => {
-                          tooltip.remove()
-                        }, 500)
+                        // Hide city name tooltip with fade
+                        const tooltip = cityLabels[animatedCityCode]
+                        if (tooltip) {
+                          tooltip.setOpacity(0)
+                          
+                          // Remove tooltip after fade
+                          setTimeout(() => {
+                            tooltip.remove()
+                          }, 500)
+                        }
+                      } catch (error) {
+                        console.error("Error resetting city marker:", error)
                       }
-                      
-                      // After animation is complete, remove all classes
-                      setTimeout(() => {
-                        marker._path.classList.remove('fade-animation')
-                      }, 500)
                     }
                     
                     // Remove from animated cities set
