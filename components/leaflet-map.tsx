@@ -82,11 +82,31 @@ export function LeafletMap() {
       let currentIndex = 0
       let planeMarker: L.Marker | null = null
       
-      const createPlaneIcon = () => {
+      // Remove existing polyline and create a new one with curved options
+      if (routeRef.current) {
+        routeRef.current.remove()
+      }
+      
+      // Helper function to calculate bearing between two points
+      const calculateBearing = (start: [number, number], end: [number, number]): number => {
+        const startLat = start[0] * Math.PI / 180
+        const startLng = start[1] * Math.PI / 180
+        const endLat = end[0] * Math.PI / 180
+        const endLng = end[1] * Math.PI / 180
+        
+        const y = Math.sin(endLng - startLng) * Math.cos(endLat)
+        const x = Math.cos(startLat) * Math.sin(endLat) -
+                Math.sin(startLat) * Math.cos(endLat) * Math.cos(endLng - startLng)
+        const bearing = Math.atan2(y, x) * 180 / Math.PI
+        
+        return (bearing + 360) % 360
+      }
+      
+      const createPlaneIcon = (rotation: number) => {
         const planeIconDiv = document.createElement('div')
         planeIconDiv.className = 'plane-icon'
         const root = createRoot(planeIconDiv)
-        root.render(<Plane size={24} className="text-primary" style={{ transform: 'rotate(45deg)' }} />)
+        root.render(<Plane size={24} className="text-primary" style={{ transform: `rotate(${rotation}deg)` }} />)
         
         return L.divIcon({
           html: planeIconDiv,
@@ -96,37 +116,138 @@ export function LeafletMap() {
         })
       }
       
+      // Create curved path between points
+      const createCurvedPath = (points: [number, number][]) => {
+        const curvedPaths: L.LatLngExpression[][] = []
+        
+        for (let i = 0; i < points.length - 1; i++) {
+          const start = points[i]
+          const end = points[i + 1]
+          
+          // Calculate midpoint and offset it to create a curve
+          const midLat = (start[0] + end[0]) / 2
+          const midLng = (start[1] + end[1]) / 2
+          
+          // Add a slight offset to create a curved path
+          const latDiff = end[0] - start[0]
+          const lngDiff = end[1] - start[1]
+          const offset = 0.02 // Adjust this value to change the curve amount
+          
+          // Create a curved path by offsetting the midpoint
+          const curvedMidLat = midLat + (lngDiff * offset)
+          const curvedMidLng = midLng - (latDiff * offset)
+          
+          // Create path with control point
+          curvedPaths.push([
+            [start[0], start[1]],
+            [curvedMidLat, curvedMidLng],
+            [end[0], end[1]]
+          ] as L.LatLngExpression[])
+        }
+        
+        return curvedPaths
+      }
+      
+      const curvedPaths = createCurvedPath(routeCoordinates)
+      
+      // Draw initial curved paths with reduced opacity
+      curvedPaths.forEach((path, index) => {
+        L.polyline(path, {
+          color: '#FF0000',
+          weight: 2,
+          opacity: 0.3,
+          smoothFactor: 1,
+          dashArray: '5, 10',
+          lineCap: 'round',
+          lineJoin: 'round'
+        }).addTo(mapRef.current!)
+      })
+      
+      // Initialize route animation with a position along the path
+      let pathIndex = 0
+      let segmentIndex = 0
+      let progress = 0
+      const animationSpeed = 0.02 // Adjust speed
+      
       const animateRoute = () => {
-        if (currentIndex < routeCoordinates.length) {
-          // Add point to the route path
-          routeRef.current!.addLatLng(routeCoordinates[currentIndex] as L.LatLngExpression)
+        if (pathIndex < curvedPaths.length) {
+          const currentPath = curvedPaths[pathIndex]
           
-          // Calculate rotation angle for the plane
-          const nextIndex = currentIndex + 1 < routeCoordinates.length ? currentIndex + 1 : currentIndex
-          const currentPos = routeCoordinates[currentIndex]
-          const nextPos = routeCoordinates[nextIndex]
-          
-          // Remove previous plane marker if exists
-          if (planeMarker) {
-            planeMarker.remove()
+          if (segmentIndex < currentPath.length - 1) {
+            // Get current segment points
+            const p1 = currentPath[segmentIndex] as [number, number]
+            const p2 = currentPath[segmentIndex + 1] as [number, number]
+            
+            // Calculate position along the segment using progress
+            const lat = p1[0] + (p2[0] - p1[0]) * progress
+            const lng = p1[1] + (p2[1] - p1[1]) * progress
+            const currentPos: [number, number] = [lat, lng]
+            
+            // Calculate bearing for plane rotation
+            const nextPos = segmentIndex < currentPath.length - 2 
+              ? currentPath[segmentIndex + 2] as [number, number] 
+              : (pathIndex < curvedPaths.length - 1 
+                ? curvedPaths[pathIndex + 1][0] as [number, number] 
+                : currentPath[segmentIndex + 1] as [number, number])
+            
+            const bearing = calculateBearing(currentPos, nextPos)
+            
+            // Remove previous plane marker if exists
+            if (planeMarker) {
+              planeMarker.remove()
+            }
+            
+            // Create new plane marker at current position with correct rotation
+            planeMarker = L.marker(currentPos as L.LatLngExpression, {
+              icon: createPlaneIcon(bearing),
+              zIndexOffset: 1000
+            }).addTo(mapRef.current!)
+            
+            // Increment progress
+            progress += animationSpeed
+            
+            // Move to next segment if progress is complete
+            if (progress >= 1) {
+              segmentIndex++
+              progress = 0
+              
+              // Move to next path if current path is complete
+              if (segmentIndex >= currentPath.length - 1) {
+                pathIndex++
+                segmentIndex = 0
+              }
+            }
+            
+            // Continue animation
+            requestAnimationFrame(animateRoute)
+          } else {
+            // Move to next path
+            pathIndex++
+            segmentIndex = 0
+            progress = 0
+            
+            if (pathIndex < curvedPaths.length) {
+              requestAnimationFrame(animateRoute)
+            }
           }
-          
-          // Create new plane marker at current position
-          planeMarker = L.marker(currentPos as L.LatLngExpression, {
-            icon: createPlaneIcon(),
-            zIndexOffset: 1000
-          }).addTo(mapRef.current!)
-          
-          currentIndex++
-          setTimeout(animateRoute, 1000)
         }
       }
       
+      // Start the animation
       animateRoute()
       
       return () => {
         if (planeMarker) {
           planeMarker.remove()
+        }
+        
+        // Clean up all polylines when component unmounts
+        if (mapRef.current) {
+          mapRef.current.eachLayer((layer) => {
+            if (layer instanceof L.Polyline) {
+              layer.remove()
+            }
+          })
         }
       }
     }
