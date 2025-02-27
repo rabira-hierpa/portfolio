@@ -188,12 +188,27 @@ export function LeafletMap() {
             fillOpacity: 0.8,
           }).addTo(mapRef.current!)
           
-          // Add airport code tooltip
+          // Add permanent airport code tooltip (always visible)
           marker.bindTooltip(city.code, {
             permanent: true,
             direction: 'center',
             className: 'airport-code-tooltip'
           })
+          
+          // Create a separate non-permanent tooltip for the city name (will be shown when triggered)
+          const nameTooltip = L.tooltip({
+            permanent: false,
+            direction: 'top',
+            className: 'city-name-tooltip',
+            opacity: 0
+          })
+          .setContent(`<div class="city-name">${city.name}</div>`)
+          .setLatLng(city.coordinates as L.LatLngExpression)
+          
+          // Store references for animation
+          cityMarkers[city.code] = marker
+          cityLabels[city.code] = nameTooltip
+          cityOriginalRadius[city.code] = 4 // Store original radius
         })
 
         routeRef.current = L.polyline([], {
@@ -243,7 +258,8 @@ export function LeafletMap() {
         const planeIconDiv = document.createElement('div')
         planeIconDiv.className = 'plane-icon'
         const root = createRoot(planeIconDiv)
-        root.render(<Plane size={24} className="text-primary" style={{ transform: `rotate(${rotation}deg)` }} />)
+        // Adjust rotation by -45 degrees to align plane icon with flight path direction
+        root.render(<Plane size={24} className="text-primary" style={{ transform: `rotate(${rotation - 45}deg)` }} />)
         
         return L.divIcon({
           html: planeIconDiv,
@@ -252,6 +268,27 @@ export function LeafletMap() {
           iconAnchor: [12, 12]
         })
       }
+      
+      // Function to check if plane is at a city (for animations)
+      const isAtCity = (position: [number, number]): string | null => {
+        // Check if the position is close to any city
+        for (const city of cities) {
+          const cityPos = city.coordinates
+          // Calculate distance between points
+          const latDiff = position[0] - cityPos[0]
+          const lngDiff = position[1] - cityPos[1]
+          const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff)
+          
+          // If within threshold, consider plane at this city
+          if (distance < 0.5) { // Threshold in degrees
+            return city.code
+          }
+        }
+        return null
+      }
+      
+      // Track which cities we've animated already to avoid repeating
+      const animatedCities = new Set<string>()
       
       // Create curved path between points with more control points for smoother curves
       const createCurvedPath = (points: [number, number][]) => {
@@ -315,7 +352,7 @@ export function LeafletMap() {
       const activePaths: L.Polyline[] = []
       const completedPaths: L.Polyline[] = []
       
-      // Add a CSS class for the airport code tooltips
+      // Add CSS classes for tooltips and animation
       const styleElement = document.createElement('style')
       styleElement.textContent = `
         .airport-code-tooltip {
@@ -330,21 +367,56 @@ export function LeafletMap() {
         .airport-code-tooltip::before {
           display: none;
         }
+        
+        .city-name-tooltip {
+          background-color: rgba(0, 0, 0, 0.7);
+          border: 1px solid #CD9B1C;
+          border-radius: 4px;
+          color: white;
+          font-weight: bold;
+          padding: 5px 10px;
+          font-size: 12px;
+          transition: opacity 0.5s ease;
+        }
+        
+        @keyframes pulseCity {
+          0% { transform: scale(1); }
+          50% { transform: scale(5); }
+          100% { transform: scale(5); }
+        }
+        
+        @keyframes fadeCity {
+          0% { transform: scale(5); }
+          100% { transform: scale(1); }
+        }
+        
+        .pulse-animation {
+          animation: pulseCity 0.5s ease-out forwards;
+        }
+        
+        .fade-animation {
+          animation: fadeCity 0.5s ease-in forwards;
+        }
       `
       document.head.appendChild(styleElement)
       
       // Use a consistent color for all flight routes
       const flightPathColor = '#FF0000' // Bright red for all routes
       
+      // Store city markers for animation effects
+      const cityMarkers: {[code: string]: L.CircleMarker} = {}
+      const cityLabels: {[code: string]: L.Tooltip} = {}
+      const cityOriginalRadius: {[code: string]: number} = {}
+      
       // Draw all curved paths with dashed lines
       curvedPaths.forEach((path, index) => {
         // Draw initial dashed path
         const line = L.polyline(path, {
           color: flightPathColor,
-          weight: 15,         // Increased width to 15px as requested
+          weight: 5,          // Reduced to 5px as requested
           opacity: 0.25,      // Reduced opacity for inactive paths
           smoothFactor: 1,
-          dashArray: '15, 15', // Dashed line pattern
+          dashArray: '10, 10', // Dashed line pattern
           lineCap: 'round',
           lineJoin: 'round'
         }).addTo(mapRef.current!)
@@ -354,7 +426,7 @@ export function LeafletMap() {
         // Create an empty active path (will be temporarily filled during animation)
         const activePath = L.polyline([], {
           color: flightPathColor,
-          weight: 15,         // Same width as requested
+          weight: 5,          // Reduced to 5px as requested
           opacity: 0.6,       // More visible for active segment
           smoothFactor: 1,
           lineCap: 'round',
@@ -366,8 +438,8 @@ export function LeafletMap() {
         // Create an empty completed path (will be filled as plane passes each segment)
         const completedPath = L.polyline([], {
           color: flightPathColor,
-          weight: 15,        // Same width as requested
-          opacity: 0.8,      // High visibility for completed segments
+          weight: 5,          // Reduced to 5px as requested
+          opacity: 0.8,       // High visibility for completed segments
           smoothFactor: 1,
           lineCap: 'round',
           lineJoin: 'round'
@@ -401,6 +473,69 @@ export function LeafletMap() {
             if (activePaths[pathIndex].getLatLngs().length > activeTail) {
               const latlngs = activePaths[pathIndex].getLatLngs() as L.LatLng[]
               activePaths[pathIndex].setLatLngs(latlngs.slice(latlngs.length - activeTail))
+            }
+            
+            // Check if plane is at a city position
+            const cityCode = isAtCity(currentPoint)
+            
+            // Handle city animations
+            if (cityCode && !animatedCities.has(cityCode)) {
+              // We've reached a new city
+              animatedCities.add(cityCode)
+              
+              // Animate the city marker (expand)
+              const marker = cityMarkers[cityCode]
+              if (marker) {
+                // Apply pulse animation class
+                marker._path.classList.add('pulse-animation')
+                
+                // Show city name tooltip
+                cityLabels[cityCode].setLatLng(marker.getLatLng())
+                  .addTo(mapRef.current!)
+                  .setOpacity(1)
+              }
+            } 
+            // Check if we're leaving a city that was previously animated
+            else if (!cityCode && animatedCities.size > 0) {
+              // For each animated city, check if we're now far from it
+              for (const animatedCityCode of Array.from(animatedCities)) {
+                const city = cities.find(c => c.code === animatedCityCode)
+                if (city) {
+                  const cityPos = city.coordinates
+                  const latDiff = currentPoint[0] - cityPos[0]
+                  const lngDiff = currentPoint[1] - cityPos[1]
+                  const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff)
+                  
+                  // If we've moved away from this city
+                  if (distance > 1.0) { // Larger threshold for leaving
+                    const marker = cityMarkers[animatedCityCode]
+                    if (marker) {
+                      // Remove pulse animation
+                      marker._path.classList.remove('pulse-animation')
+                      marker._path.classList.add('fade-animation')
+                      
+                      // Hide city name tooltip with fade
+                      const tooltip = cityLabels[animatedCityCode]
+                      if (tooltip) {
+                        tooltip.setOpacity(0)
+                        
+                        // Remove tooltip after fade
+                        setTimeout(() => {
+                          tooltip.remove()
+                        }, 500)
+                      }
+                      
+                      // After animation is complete, remove all classes
+                      setTimeout(() => {
+                        marker._path.classList.remove('fade-animation')
+                      }, 500)
+                    }
+                    
+                    // Remove from animated cities set
+                    animatedCities.delete(animatedCityCode)
+                  }
+                }
+              }
             }
             
             // Calculate bearing for plane rotation
