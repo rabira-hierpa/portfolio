@@ -1,10 +1,10 @@
-import { Github, Linkedin, Twitter, MapPin, Globe2, Plane } from "lucide-react"
-import Link from "next/link"
+import { Github, Linkedin, Twitter, MapPin, Globe2, Plane } from "lucide-react";
+import Link from "next/link";
 
-import { Button } from "@/components/ui/button"
-import { LeafletMap } from "@/components/leaflet-map"
-import { ProjectCard } from "@/components/project-card"
-import { BlogPostCard } from "@/components/blog-post-card"
+import { Button } from "@/components/ui/button";
+import { LeafletMap } from "@/components/leaflet-map";
+import { ProjectCard } from "@/components/project-card";
+import { BlogPostCard } from "@/components/blog-post-card";
 
 export default function Home() {
   const blogPosts = [
@@ -28,21 +28,20 @@ export default function Home() {
     },
     {
       title: "Optimizing Geospatial Queries in PostgreSQL",
-      excerpt: "Learn advanced techniques for improving the performance of geospatial queries in PostgreSQL databases.",
+      excerpt:
+        "Learn advanced techniques for improving the performance of geospatial queries in PostgreSQL databases.",
       date: "June 20, 2023",
       imageUrl: "/placeholder.svg?height=300&width=400",
       category: "Database",
       slug: "optimizing-geospatial-queries-postgresql",
     },
-  ]
+  ];
 
   return (
     <main className="min-h-screen">
       {/* Hero Section */}
       <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-zinc-900">
-        <div className="absolute inset-0 z-0">
-          <LeafletMap />
-        </div>
+        <div className="absolute inset-0 z-0">{/* <LeafletMap /> */}</div>
         <div className="container relative z-10 px-4 flex flex-col items-start justify-center">
           <div className="max-w-3xl text-white mb-8 text-left">
             <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
@@ -51,14 +50,18 @@ export default function Home() {
               One Project at a Time
             </h1>
             <p className="text-lg md:text-xl text-zinc-300 mb-8">
-              GIS Developer & Full Stack Engineer specializing in interactive mapping solutions and location-based
-              applications
+              GIS Developer & Full Stack Engineer specializing in interactive
+              mapping solutions and location-based applications
             </p>
             <div className="flex flex-wrap gap-4">
               <Button size="lg" className="bg-primary hover:bg-primary/90">
                 View Projects
               </Button>
-              <Button size="lg" variant="outline" className="text-black bg-white border-white hover:bg-white/90">
+              <Button
+                size="lg"
+                variant="outline"
+                className="text-black bg-white border-white hover:bg-white/90"
+              >
                 Read Blog
               </Button>
             </div>
@@ -90,8 +93,9 @@ export default function Home() {
                 <h2 className="text-2xl font-bold">GIS Development</h2>
               </div>
               <p className="text-zinc-600">
-                Specialized in creating interactive mapping solutions, spatial analysis tools, and location-based
-                services that transform complex geographical data into actionable insights.
+                Specialized in creating interactive mapping solutions, spatial
+                analysis tools, and location-based services that transform
+                complex geographical data into actionable insights.
               </p>
             </div>
             <div className="space-y-4">
@@ -100,8 +104,9 @@ export default function Home() {
                 <h2 className="text-2xl font-bold">Web Development</h2>
               </div>
               <p className="text-zinc-600">
-                Building modern, responsive web applications with cutting-edge technologies to deliver seamless user
-                experiences and powerful functionality.
+                Building modern, responsive web applications with cutting-edge
+                technologies to deliver seamless user experiences and powerful
+                functionality.
               </p>
             </div>
           </div>
@@ -156,6 +161,5 @@ export default function Home() {
         </div>
       </section>
     </main>
-  )
+  );
 }
-
